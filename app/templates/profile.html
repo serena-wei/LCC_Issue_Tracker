@@ -1,0 +1,152 @@
+{% extends 'userbase.html' %}
+
+{% block title %}User Profile{% endblock %}
+
+{# Set the active page to be highlighted in the navigation bar. #}
+{% set active_page = 'profile' %}
+
+{% block content %}
+<section class="container py-5">
+    <div class="row justify-content-center text-center">
+        <div class="col-12 col-lg-7">
+            <h1>{{ profile.role.title() if profile else ''}} Profile</h1>
+            <p class="lead text-muted">Here's everything we know about you.</p>
+        </div>
+    </div>
+</section>
+
+<section class="container">
+    <!-- Display flash messages ABOVE the form -->
+    {% with messages = get_flashed_messages(with_categories=True) %}
+        {% if messages %}
+            <div class="mb-3">
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} w-100">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+    <form action="/profile/edit" method="POST" enctype="multipart/form-data">
+        <div class="row justify-content-center">
+            <div class="row mb-4">
+                <div class="col-12 col-md-4 text-center">
+                    <div class="profile-image">
+                        <input type="hidden" name="profile_image" id="current-profile-image" 
+                            value="{{ profile.profile_image if profile else '' or url_for('static', filename='images/default_profile_image.jpg') }}">
+                        <!-- Display profile image -->
+                        <img id="profile-image" 
+                            src="{{ profile.profile_image or url_for('static', filename='images/default_profile_image.jpg') }}" 
+                            alt="User Profile Image" 
+                            class="rounded-circle mx-auto d-block border shadow-sm img-fluid"
+                            style="width: 100px; height: 100px; object-fit: cover;">
+                    </div>
+                    {% if mode == 'edit' %}
+                        <div class="mt-2">
+                            <button type="button" class="btn btn-success btn-sm" onclick="document.getElementById('upload-image').click()">Change</button>
+                            <button type="button" class="btn btn-danger btn-sm" onclick="deleteProfileImage()">Delete</button>
+                        </div>
+                        <input type="file" id="upload-image" name="profile_image" class="d-none" accept="image/jpeg, image/png, image/jpg" onchange="previewImage(event)">
+                        <div class="form-text">Please upload a JPEG or PNG image file.</div>
+                        <input type="hidden" id="delete-image" name="delete_image" value="0">
+                    {% endif %}
+                </div>
+                <div class="col-12 col-md-4">
+                    <label for="username" class="form-label">Username</label>
+                    <input type="text" class="form-control" id="username" name="username" value="{{ profile.username if profile else '' }}" readonly>
+                </div>
+                <div class="col-12 col-md-4">
+                    <label for="email" class="form-label">Email</label>
+                    {% if mode == 'edit' %}
+                        <input type="text" class="form-control{% if email_error %} is-invalid{% endif %}" id="email" maxlength=320 name="email" value="{{ profile.email if profile else '' }}" required>
+                        <div id="emailHelp" style="color: #0000FF;" class="form-text">Max 320 characters.</div>
+                        <div class="invalid-feedback">{{ email_error }}</div>
+                    {% else %}
+                        <input type="text" class="form-control" id="email" name="email" value="{{ profile.email if profile else '' }}" readonly>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="row mb-4">
+                <div class="col-12 col-md-4">
+                    <label for="firstname" class="form-label">First Name</label>
+                    {% if mode == 'edit' %}
+                        <input type="text" class="form-control{% if first_name_error %} is-invalid{% endif %}" id="firstname" maxlength=50 name="first_name" value="{{ profile.first_name if profile else '' }}" required>
+                        <div id="firstnameHelp" style="color: #0000FF;" class="form-text">Max 50 characters.</div>
+                        <div class="invalid-feedback">{{ first_name_error }}</div>
+                    {% else %}
+                        <input type="text" class="form-control" id="firstname" name="first_name" value="{{ profile.first_name if profile else '' }}" readonly>
+                    {% endif %}
+                </div>
+                <div class="col-12 col-md-4">
+                    <label for="lastname" class="form-label">Last Name</label>
+                    {% if mode == 'edit' %}
+                        <input type="text" class="form-control{% if last_name_error %} is-invalid{% endif %}" id="lastname" maxlength=50 name="last_name" value="{{ profile.last_name if profile else '' }}" required>
+                        <div id="lastnameHelp" style="color: #0000FF;" class="form-text">Max 50 characters.</div>
+                        <div class="invalid-feedback">{{ last_name_error }}</div>
+                    {% else %}
+                        <input type="text" class="form-control" id="lastname" name="last_name" value="{{ profile.last_name if profile else '' }}" readonly>
+                    {% endif %}
+                </div>
+                <div class="col-12 col-md-4">
+                    <label for="location" class="form-label">Location</label>
+                    {% if mode == 'edit' %}
+                        <input type="text" class="form-control{% if location_error %} is-invalid{% endif %}" id="location" maxlength=50 name="location" value="{{ profile.location if profile else '' }}" required>
+                        <div id="locationHelp" style="color: #0000FF;" class="form-text">Max 50 characters.</div>
+                        <div class="invalid-feedback">{{ location_error }}</div>
+                    {% else %}
+                        <input type="text" class="form-control" id="location" name="location" value="{{ profile.location if profile else '' }}" readonly>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="row justify-content-center mt-3">
+            <div class="col-12 col-md-4 d-flex justify-content-between">
+                {% if mode == 'edit' %}
+                    <button type="submit" class="btn btn-success px-4 w-100 w-sm-auto me-2">Save</button>
+                    <a href="/profile" class="btn btn-secondary px-4 w-100 w-sm-auto">Cancel</a>                
+                {% else %}
+                    <a href="/profile?mode=edit" class="btn btn-success px-4 w-100 w-sm-auto me-2">Edit</a>
+                {% endif %}
+            </div>
+        </div>
+    </form>
+</section>
+
+<script>
+    function previewImage(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        // Validate file extension
+        const allowedExtensions = ['jpg', 'jpeg', 'png'];
+        const fileExtension = file.name.split('.').pop().toLowerCase();
+
+        // Check if the file extension is valid
+        if (!allowedExtensions.includes(fileExtension)) {
+            // Display error message if the file extension is invalid
+            alert("Please upload a JPEG or PNG image file.");
+            // Reset the image preview and clear the input
+            document.getElementById('profile-image').src = "{{ url_for('static', filename='images/default_profile_image.jpg') }}";
+            event.target.value = '';  // Clear the file input
+        } else {
+            // If valid, preview the image
+            const reader = new FileReader();
+            reader.onload = function () {
+                document.getElementById('profile-image').src = reader.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    function deleteProfileImage() {
+        if (confirm("Are you sure you want to delete your profile picture? This action cannot be undone.")) {
+            // Just reset the image preview without making an API call for deletion
+            document.getElementById('profile-image').src = "{{ url_for('static', filename='images/default_profile_image.jpg') }}";
+            // Mark the profile image as deleted in the form
+            // Set the hidden input to mark the image as deleted
+            document.getElementById('delete-image').value = '1'; 
+            document.getElementById('upload-image').value = ''; 
+        }
+    }
+</script>
+{% endblock %}
+

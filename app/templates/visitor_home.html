@@ -1,0 +1,29 @@
+{% extends 'userbase.html' %}
+
+{% block title %}Visitor Home{% endblock %}
+
+{% set active_page = 'home' %}
+
+{% block content %}
+<section class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-12 col-sm-10 col-md-8 col-lg-6 text-center">
+            <h2 class="mb-4">Welcome to the Lincoln Community Campground (LCC) Issue Tracker</h2>
+            <p class="text-muted">
+                This system helps you quickly report campground issues and track their resolution progress. Your current role is <strong>Visitor</strong>.
+            </p>
+            <div class="mt-4">
+                <h4 class="mb-3">As a visitor, you can:</h4>
+                <ul class="list-group text-start d-inline-block">
+                    <li class="list-group-item">Register a new account</li>
+                    <li class="list-group-item">Reset your password</li>
+                    <li class="list-group-item">View and update your profile details</li>
+                    <li class="list-group-item">View issues you have reported</li>
+                    <li class="list-group-item">Comment on the issues you have submitted</li>
+                    <li class="list-group-item">See comments from other users on your issues</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
