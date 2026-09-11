@@ -1,8 +1,6 @@
--- Disable foreign key checks to avoid foreign key issues when inserting data
 SET foreign_key_checks = 0;
 
--- Insert users (20 visitors, 5 helpers, 2 admins)
--- 20 visitors
+-- Users: 20 visitors, 5 helpers, 2 admins
 INSERT INTO users (username, password_hash, email, first_name, last_name, location, profile_image, role, status)
 VALUES
 ('visitor1', '$2b$12$eiHxx8IeVILH2NBYzmyoRuR0HYGWWpuOasLWaS4E8ZzVh/pxCTGNy', 'visitor1@example.com', 'John', 'Doe', 'Auckland', '/static/images/default_profile_image.jpg', 'visitor', 'active'),
@@ -26,7 +24,7 @@ VALUES
 ('visitor19', '$2b$12$GydSpWeDAfWEzIjWqqVRZ.00KWZ9WKL7qcWemAnGzY8F.8/S3TuYi', 'visitor19@example.com', 'Alexander', 'Taylor', 'Rotorua', '/static/images/default_profile_image.jpg', 'visitor', 'active'),
 ('visitor20', '$2b$12$Pe/lRVgPuXE7NG8WqamCze//BQcNCI7OSXXhxVGl94MXAtMhT.F3i', 'visitor20@example.com', 'Harper', 'Moore', 'Kaitaia', '/static/images/default_profile_image.jpg', 'visitor', 'active');
 
--- 5 helpers
+-- Helpers
 INSERT INTO users (username, password_hash, email, first_name, last_name, location, profile_image, role, status)
 VALUES
 ('helper1', '$2b$12$0ZsJITJiTS724KCyithvlucNezhFXnGIhjupSXhDSL01Cw5gGb71u', 'helper1@example.com', 'William', 'Jackson', 'Auckland', '/static/images/default_profile_image.jpg', 'helper', 'active'),
@@ -35,13 +33,12 @@ VALUES
 ('helper4', '$2b$12$yPyvOASLDNcSFnheVZft8.69iOjQSLF0MkjmpS3Nrlen6RBiyYpwy', 'helper4@example.com', 'Grace', 'Lewis', 'Dunedin', '/static/images/default_profile_image.jpg', 'helper', 'active'),
 ('helper5', '$2b$12$Vp.2ujviUbDHYwbnSrmKGuul6kS5DY5yJAp018PD8zlG8pwMEEY8e', 'helper5@example.com', 'Henry', 'Walker', 'Hamilton', '/static/images/default_profile_image.jpg', 'helper', 'active');
 
--- 2 admins
+-- Admins
 INSERT INTO users (username, password_hash, email, first_name, last_name, location, profile_image, role, status)
 VALUES
 ('admin1', '$2b$12$auDQU3jr4DrVrojDrkRaU.PrZDMOP0Sv2NuxeVHBzi68HnjUNKBT.', 'admin1@example.com', 'Olivia', 'Scott', 'Auckland', '/static/images/default_profile_image.jpg', 'admin', 'active'),
 ('admin2', '$2b$12$QwHh1lIaqfPszjrk.9aMWesyLVSJ5It7SZYXchGMxSAVAvkbie1/S', 'admin2@example.com', 'Jack', 'Adams', 'Wellington', '/static/images/default_profile_image.jpg', 'admin', 'active');
 
--- Insert issues (20 issues with realistic problem descriptions)
 INSERT INTO issues (user_id, summary, description, status)
 VALUES
 (1, 'Tent collapsed due to wind', 'My tent collapsed during a strong wind last night. Need help securing it properly.', 'new'),
@@ -65,7 +62,6 @@ VALUES
 (19, 'Damaged hiking trail signage', 'The trail signs for the hiking routes are damaged or missing, making navigation difficult.', 'stalled'),
 (20, 'Overbooked campsites', 'The campsite seems to be overbooked, and my family does not have a designated spot.', 'resolved');
 
--- Insert comments (20 comments related to issues)
 INSERT INTO comments (issue_id, user_id, content)
 VALUES
 (2, 2, 'Is there a recent power issue causing the water pump to malfunction? It might need an electrical check.'),
@@ -92,5 +88,4 @@ VALUES
 (19, 23, 'The trail signage is definitely an issue. Let’s notify the staff so they can fix it.'),
 (20, 24, 'That’s unfortunate! Hopefully, they can resolve the overbooking issue soon.');
 
--- Enable foreign key checks
 SET foreign_key_checks = 1;

@@ -2,7 +2,6 @@
 
 {% block title %}User Profile{% endblock %}
 
-{# Set the active page to be highlighted in the navigation bar. #}
 {% set active_page = 'profile' %}
 
 {% block content %}
@@ -16,7 +15,6 @@
 </section>
 
 <section class="container">
-    <!-- Display flash messages ABOVE the form -->
     {% with messages = get_flashed_messages(with_categories=True) %}
         {% if messages %}
             <div class="mb-3">
@@ -33,7 +31,6 @@
                     <div class="profile-image">
                         <input type="hidden" name="profile_image" id="current-profile-image" 
                             value="{{ profile.profile_image if profile else '' or url_for('static', filename='images/default_profile_image.jpg') }}">
-                        <!-- Display profile image -->
                         <img id="profile-image" 
                             src="{{ profile.profile_image or url_for('static', filename='images/default_profile_image.jpg') }}" 
                             alt="User Profile Image" 
