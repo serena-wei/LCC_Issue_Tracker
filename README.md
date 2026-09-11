@@ -10,6 +10,21 @@ The application includes user authentication, role-based access control, issue m
 - **Database:** MySQL
 - **Frontend:** HTML, CSS, JavaScript, Jinja2
 - **Password Security:** bcrypt
+- **Testing:** pytest
+
+## Architecture
+
+The app is organized for maintainability rather than as a single flat module:
+
+| Layer | Responsibility |
+|------|----------------|
+| `create_app()` | Application factory and extension wiring |
+| `blueprints/` | HTTP routes: `auth`, `users`, `issues` |
+| `repositories/` | SQL / data access only |
+| `config.py` | Secrets and DB settings from environment (`.env`) |
+| `tests/` | Focused coverage for login, RBAC, and issue workflow |
+
+This structure keeps route handlers thin and makes authentication, authorization, and data access easier to reason about and test.
 
 ## Features
 
@@ -113,7 +128,7 @@ Passwords in the sample database are stored as bcrypt hashes.
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/xiaoxuan-wei-1161823/LCC_Issue_Tracker.git
+git clone https://github.com/serena-wei/LCC_Issue_Tracker.git
 cd LCC_Issue_Tracker
 ```
 
