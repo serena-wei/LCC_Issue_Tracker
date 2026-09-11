@@ -1,8 +1,10 @@
 """Issues blueprint: issue list/create/status and comments."""
 from flask import Blueprint, flash, jsonify, redirect, render_template, request, session, url_for
 
-from app import constants, db
+from app import constants
 from app.decorators import login_and_role_required, login_required
+from app.repositories import comments as comments_repo
+from app.repositories import issues as issues_repo
 
 issues_bp = Blueprint('issues', __name__)
 
@@ -26,27 +28,8 @@ def issues():
         return render_template(constants.TEMPLATE_ISSUES), constants.HTTP_STATUS_CODE_400
 
     try:
-        with db.get_cursor() as cursor:
-            if role == constants.USER_ROLE_VISITOR:
-                if status == constants.ISSUES_STATUS_RESOLVED:
-                    cursor.execute(
-                        'SELECT i.issue_id, i.summary, i.description, i.created_at, i.status FROM issues i WHERE i.user_id = %s AND i.status = %s;',
-                        (session[constants.USER_ID], constants.ISSUES_STATUS_RESOLVED))
-                else:
-                    cursor.execute(
-                        'SELECT i.issue_id, i.summary, i.description, i.created_at, i.status FROM issues i WHERE i.user_id = %s AND i.status != %s;',
-                        (session[constants.USER_ID], constants.ISSUES_STATUS_RESOLVED))
-            else:
-                if status == constants.ISSUES_STATUS_RESOLVED:
-                    cursor.execute(
-                        'SELECT i.issue_id, i.summary, i.description, i.created_at, i.status FROM issues i WHERE i.status = %s;',
-                        (constants.ISSUES_STATUS_RESOLVED,))
-                else:
-                    cursor.execute(
-                        'SELECT i.issue_id, i.summary, i.description, i.created_at, i.status FROM issues i WHERE i.status != %s;',
-                        (constants.ISSUES_STATUS_RESOLVED,))
-            issues_list = cursor.fetchall()
-            return render_template(constants.TEMPLATE_ISSUES, issues=issues_list)
+        issues_list = issues_repo.list_for_role(role, session[constants.USER_ID], status)
+        return render_template(constants.TEMPLATE_ISSUES, issues=issues_list)
     except Exception:
         flash("An error occurred while processing your request. Please try again.", constants.FLASH_MESSAGE_DANGER)
         return render_template(constants.TEMPLATE_ISSUES), constants.HTTP_STATUS_CODE_500
@@ -82,16 +65,13 @@ def issues_insert():
                                    summary=summary,
                                    description=description,
                                    summary_error=summary_error)
-        else:
-            try:
-                with db.get_cursor() as cursor:
-                    cursor.execute(
-                        'INSERT INTO issues (summary, description, user_id, status) VALUES (%s, %s, %s, %s);',
-                        (summary, description, session[constants.USER_ID], constants.ISSUES_STATUS_NEW))
-                return redirect(url_for(constants.URL_ISSUES, status=status))
-            except Exception:
-                flash("An error occurred while processing your request. Please try again.", constants.FLASH_MESSAGE_DANGER)
-                return render_template(constants.TEMPLATE_ISSUES_INSERT), constants.HTTP_STATUS_CODE_500
+
+        try:
+            issues_repo.create(summary, description, session[constants.USER_ID])
+            return redirect(url_for(constants.URL_ISSUES, status=status))
+        except Exception:
+            flash("An error occurred while processing your request. Please try again.", constants.FLASH_MESSAGE_DANGER)
+            return render_template(constants.TEMPLATE_ISSUES_INSERT), constants.HTTP_STATUS_CODE_500
 
     return render_template(constants.TEMPLATE_ISSUES_INSERT)
 
@@ -107,8 +87,7 @@ def change_status():
         return jsonify({'error': 'Missing issue_id or status'}), constants.HTTP_STATUS_CODE_400
 
     try:
-        with db.get_cursor() as cursor:
-            cursor.execute('UPDATE issues SET status = %s WHERE issue_id = %s;', (new_status, issue_id))
+        issues_repo.update_status(issue_id, new_status)
         return jsonify({"message": "Status updated successfully."})
     except Exception:
         return jsonify({"error": "An error occurred while processing your request. Please try again."}), constants.HTTP_STATUS_CODE_500
@@ -124,14 +103,7 @@ def comments():
         return render_template(constants.TEMPLATE_COMMENTS), constants.HTTP_STATUS_CODE_400
 
     try:
-        with db.get_cursor() as cursor:
-            cursor.execute(
-                'SELECT c.comment_id, c.content, c.created_at, u.username, u.profile_image, u.role '
-                'FROM comments c '
-                'LEFT JOIN users u on u.user_id = c.user_id '
-                'WHERE c.issue_id = %s;',
-                (issue_id,))
-            comments_list = cursor.fetchall()
+        comments_list = comments_repo.list_for_issue(issue_id)
     except Exception:
         flash("An error occurred while processing your request. Please try again.", constants.FLASH_MESSAGE_DANGER)
         return render_template(constants.TEMPLATE_COMMENTS), constants.HTTP_STATUS_CODE_500
@@ -166,19 +138,10 @@ def comments_insert():
             return render_template(constants.TEMPLATE_COMMENTS_INSERT), constants.HTTP_STATUS_CODE_400
 
         try:
-            with db.get_cursor() as cursor:
-                cursor.execute(
-                    'INSERT INTO comments (issue_id, user_id, content) VALUES (%s, %s, %s);',
-                    (issue_id, session[constants.USER_ID], content)
-                )
-
+            comments_repo.create(issue_id, session[constants.USER_ID], content)
             # Helper/admin comments reopen the issue
             if session[constants.USER_ROLE] in [constants.USER_ROLE_HELPER, constants.USER_ROLE_ADMIN]:
-                with db.get_cursor() as cursor:
-                    cursor.execute(
-                        'UPDATE issues SET status = %s WHERE issue_id = %s;',
-                        (constants.ISSUES_STATUS_OPEN, issue_id)
-                    )
+                issues_repo.update_status(issue_id, constants.ISSUES_STATUS_OPEN)
             return redirect(url_for(constants.URL_COMMENTS, issue_id=issue_id, status=issue_status))
         except Exception:
             flash("An error occurred while processing your request. Please try again.", constants.FLASH_MESSAGE_DANGER)
