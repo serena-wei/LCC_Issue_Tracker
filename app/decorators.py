@@ -3,8 +3,11 @@ Authentication and authorization decorators for Flask views.
 Enforces login and role-based access control across the application.
 """
 from functools import wraps
-from flask import redirect, url_for, session, render_template
+
+from flask import redirect, render_template, session, url_for
+
 from app import constants
+
 
 def login_required(f):
     """Redirects to the login page if the user is not logged in."""
@@ -34,6 +37,7 @@ def role_required(required_role):
         return decorated_function
     return decorator
 
+
 def login_and_role_required(allowed_roles):
     """
     Ensures the user is logged in and has one of the allowed roles.
@@ -52,12 +56,12 @@ def login_and_role_required(allowed_roles):
         return decorated_function
     return decorator
 
+
 def if_logged_in_redirect(f):
     """Redirects already-logged-in users to their role homepage."""
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        # Late import to avoid circular dependency with app.user
-        from app.user import user_home_url
+        from app.utils import user_home_url
         if constants.SESSION_LOGGED_IN in session:
             return redirect(user_home_url())
         return f(*args, **kwargs)

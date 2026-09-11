@@ -29,21 +29,21 @@
 				<div class="collapse navbar-collapse" id="navbarSupportedContent">
 					<ul class="navbar-nav me-auto">
 						<li class="nav-item">
-							<a class="nav-link{{ ' active' if request.args.get('status') == 'unresolved' else '' }} text-decoration-none" href="{{ url_for('issues', status='unresolved') }}">Unresolved Issues</a>
+							<a class="nav-link{{ ' active' if request.args.get('status') == 'unresolved' else '' }} text-decoration-none" href="{{ url_for('issues.issues', status='unresolved') }}">Unresolved Issues</a>
 						</li>
 						<li class="nav-item">
-							<a class="nav-link{{ ' active' if request.args.get('status') == 'resolved' else '' }} text-decoration-none" href="{{ url_for('issues', status='resolved') }}">Resolved Issues</a>
+							<a class="nav-link{{ ' active' if request.args.get('status') == 'resolved' else '' }} text-decoration-none" href="{{ url_for('issues.issues', status='resolved') }}">Resolved Issues</a>
 						</li>
 						<li class="nav-item">
-							<a class="nav-link{{' active' if active_page=='userlist' else ''}}" href="{{ url_for('user_list') }}">User List</a>
+							<a class="nav-link{{' active' if active_page=='userlist' else ''}}" href="{{ url_for('users.user_list') }}">User List</a>
 						</li>
 					</ul>
 					<ul class="navbar-nav">
 						<li class="nav-item">
-							<a class="nav-link{{' active' if active_page=='profile' else ''}}" href="{{ url_for('profile') }}">User Profile</a>
+							<a class="nav-link{{' active' if active_page=='profile' else ''}}" href="{{ url_for('users.profile') }}">User Profile</a>
 						</li>
 						<li class="nav-item">
-							<a class="nav-link" href="{{ url_for('logout') }}">Log Out</a>
+							<a class="nav-link" href="{{ url_for('auth.logout') }}">Log Out</a>
 						</li>
 					</ul>
 				</div>
