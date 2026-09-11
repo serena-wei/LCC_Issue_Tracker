@@ -1,30 +1,23 @@
 {% extends 'userbase.html' %}
 
 {% block title %}Helper Home{% endblock %}
-
 {% set active_page = 'home' %}
 
 {% block content %}
-<section class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-12 col-sm-10 col-md-8 col-lg-6 text-center">
-            <h2 class="mb-4">Welcome to the Lincoln Community Campground (LCC) Issue Tracker</h2>
-            <p class="text-muted">
-                This system helps you quickly report campground issues and track their resolution progress. Your current role is <strong>Helper</strong>.
-            </p>
-            <div class="mt-4">
-                <h4 class="mb-3">As a helper, you can:</h4>
-                <ul class="list-group text-start d-inline-block">
-                    <li class="list-group-item">Register a new account</li>
-                    <li class="list-group-item">Reset your password</li>
-                    <li class="list-group-item">View and update your personal information</li>
-                    <li class="list-group-item">View issues created by any user</li>
-                    <li class="list-group-item">Comment on issues created by any user</li>
-                    <li class="list-group-item">Update the status of issues</li>
-                    <li class="list-group-item">See comments from all users on issues</li>
-                </ul>
-            </div>
-        </div>
+<section class="page-shell">
+  <div class="surface welcome-panel">
+    <p class="role-badge mb-3">Helper</p>
+    <h2>Support visitors across the campsite</h2>
+    <p class="lead">Review every reported issue, leave guidance in comments, and move statuses forward when work is underway.</p>
+    <div class="d-flex flex-wrap gap-2 mt-4">
+      <a class="btn btn-primary" href="{{ url_for('issues.issues', status='unresolved') }}">Triage unresolved issues</a>
+      <a class="btn btn-outline-primary" href="{{ url_for('users.profile') }}">Open profile</a>
     </div>
+    <ul class="capability-list">
+      <li>View and comment on issues from any visitor</li>
+      <li>Update issue status as work progresses</li>
+      <li>Manage your own profile information</li>
+    </ul>
+  </div>
 </section>
 {% endblock %}
