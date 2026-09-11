@@ -1,8 +1,8 @@
 # LCC Issue Tracker
 
-The LCC Issue Tracker is a Flask-based web application developed for the Lincoln Community Campsite (LCC). It allows visitors to report and track issues, while helpers and administrators can manage reported issues and user accounts.
+Flask web app for the Lincoln Community Campsite (LCC): visitors report and track issues; helpers and admins manage issues and accounts.
 
-The application includes user authentication, role-based access control, issue management, comments, profile management, and user administration.
+Originally a postgraduate project at Lincoln University. Refactored for portfolio use — clearer structure, safer configuration, and focused tests — so it reads as maintainable backend work rather than a one-file coursework dump.
 
 ## Tech Stack
 
@@ -14,8 +14,6 @@ The application includes user authentication, role-based access control, issue m
 
 ## Architecture
 
-The app is organized for maintainability rather than as a single flat module:
-
 | Layer | Responsibility |
 |------|----------------|
 | `create_app()` | Application factory and extension wiring |
@@ -24,151 +22,82 @@ The app is organized for maintainability rather than as a single flat module:
 | `config.py` | Secrets and DB settings from environment (`.env`) |
 | `tests/` | Focused coverage for login, RBAC, and issue workflow |
 
-This structure keeps route handlers thin and makes authentication, authorization, and data access easier to reason about and test.
+### Design decisions
+
+- **Blueprints + repositories** — keep HTTP handlers thin; SQL lives in one place and is easier to change or mock.
+- **Config from the environment** — no secrets in source; local setup uses `.env` (see `.env.example`).
+- **Role checks as decorators** — visitor / helper / admin access is explicit on protected routes.
+- **Tests cover critical paths only** — authentication, access control, and the main issue workflow, not every UI edge case.
 
 ## Features
 
-### User Authentication
-
-- User registration and login
-- Logout
-- Password reset
-- Password validation
-- Account activation and deactivation
-- New users are assigned the `visitor` role by default
-- New users are active by default
-- Inactive users cannot log in
-- Passwords are stored using bcrypt hashes rather than plain text
-
-### User Profile
-
-All users can:
-
-- View their personal information
-- Edit their profile information
-- Change their profile image
-- Delete an uploaded profile image
-- Keep their username unchanged when editing their profile
-
-New users are assigned a default profile image when they register.
-
-### Issue Management
-
-Visitors can:
-
-- Create new issues
-- View their own unresolved issues
-- View their own resolved issues
-- Add comments to their own issues
-- View comments on their issues
-
-Helpers and administrators can:
-
-- View all reported issues
-- View comments on any issue
-- Add comments to any issue
-- Change issue status
-
-New issues are created with a `new` status.
-
-The application separates issues into resolved and unresolved views based on their current status.
-
-Adding a comment to an issue with a `new`, `stalled`, or `resolved` status changes the issue status to `open`.
-
-### Role-Based Access Control
-
-The application has three user roles:
+### Roles
 
 | Role | Access |
 |------|--------|
-| **Visitor** | Manage own profile, report issues, view own issues and comments |
-| **Helper** | Visitor features + view and manage all issues |
-| **Admin** | Helper features + manage users, roles, and account status |
+| **Visitor** | Profile, own issues and comments, report issues |
+| **Helper** | Visitor features + view/manage all issues and comments, change issue status |
+| **Admin** | Helper features + user list, role changes, batch activate/deactivate |
 
-Access to protected features is controlled by user role.
+Protected routes use role decorators. Non-admins do not see the Users nav item; direct access to `/userlist` returns **403**.
 
-For example, the **User List** is visible as a navigation option after login, but only administrators can access the page. If a visitor or helper attempts to access it, they are redirected to a **403 Forbidden** page.
+### Auth and accounts
 
-### User Administration
+- Sign up, login, logout, password reset (bcrypt hashes; inactive users cannot log in)
+- New users default to `visitor` and `active`
+- Profile view/edit, including profile image upload/delete (username stays read-only)
 
-Administrators can:
+### Issues and comments
 
-- View all users
-- Search users by username, first name, or last name
-- View users sorted by active status
-- Activate users
-- Deactivate users
-- Batch activate users
-- Batch deactivate users
-- Change a user's role to `helper` or `admin`
-
-Role changes take effect when the affected user logs in again.
+- Visitors create issues and work on their own unresolved/resolved lists
+- Helpers/admins see all issues, update status (`new` / `open` / `stalled` / `resolved`)
+- Comments on an issue; a **helper or admin** comment sets the issue status to `open`
 
 ## Database
 
-The application uses **MySQL** as its relational database.
+MySQL, with scripts:
 
-The project includes SQL scripts for setting up and populating the database:
+- `create_database.sql` — schema
+- `populate_database.sql` — sample users, issues, comments
 
-- `create_database.sql` — creates the database and required tables
-- `populate_database.sql` — populates the database with sample users, issues, and comments
-
-The sample database contains:
-
-- 20 visitor accounts
-- 5 helper accounts
-- 2 admin accounts
-- 20 issues
-- 20 comments
-
-Passwords in the sample database are stored as bcrypt hashes.
+Sample data includes 20 visitors, 5 helpers, 2 admins, 20 issues, and 20 comments. Sample passwords are stored as bcrypt hashes.
 
 ## How to Run
 
-### 1. Clone the repository
+### 1. Clone
 
 ```bash
 git clone https://github.com/serena-wei/LCC_Issue_Tracker.git
 cd LCC_Issue_Tracker
 ```
 
-### 2. Create a virtual environment
+### 2. Virtual environment
 
-On macOS/Linux:
+macOS/Linux:
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 ```
 
-On Windows:
+Windows:
 
 ```bash
 python -m venv .venv
 .venv\Scripts\activate
 ```
 
-### 3. Install dependencies
+### 3. Dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. Set up the database
+### 4. Database
 
-Run the following SQL scripts in order:
+Run in order: `create_database.sql`, then `populate_database.sql`.
 
-`create_database.sql`
-
-`populate_database.sql`
-
-`create_database.sql` creates the database and required tables.
-
-`populate_database.sql` inserts the sample users, issues, and comments.
-
-### 5. Configure the application
-
-Copy the example environment file and set your local values:
+### 5. Configuration
 
 ```bash
 cp .env.example .env
@@ -185,20 +114,23 @@ DB_PORT=3306
 DB_NAME=lcc_issue_tracker_db
 ```
 
-Do not commit `.env` — it is listed in `.gitignore`.
-Settings are loaded in `app/config.py` and applied by `create_app()`.
+Do not commit `.env`. Settings load via `app/config.py` in `create_app()`.
 
-### 6. Start the application
+### 6. Start
 
 ```bash
 python run.py
 ```
 
-The terminal will display the local URL for the Flask application.
+On macOS, port **5000** is often taken by AirPlay Receiver. If the app fails to bind, use another port:
 
-### 7. Run tests
+```bash
+flask --app run run --port 5003
+```
 
-Tests need a configured database (same `.env` as the app) and the sample data from `populate_database.sql`.
+### 7. Tests
+
+Needs the same `.env` and sample data as the app:
 
 ```bash
 pytest
@@ -206,15 +138,13 @@ pytest
 
 ## Demo Accounts
 
-The sample database includes accounts for each role:
+For local testing only:
 
 | Role | Username | Password |
 |------|----------|----------|
 | Visitor | `visitor1` | `Visitor1pass*` |
 | Helper | `helper1` | `Helper1pass*` |
 | Admin | `admin1` | `Admin1pass*` |
-
-These accounts are provided for local testing only.
 
 ## Project Structure
 
@@ -233,19 +163,12 @@ LCC_Issue_Tracker/
 │   ├── extensions.py
 │   ├── utils.py
 │   └── validators.py
+├── tests/                   # Auth, RBAC, issue workflow
 ├── .env.example
 ├── create_database.sql
 ├── populate_database.sql
-├── password_hash_generator.py
+├── password_hash_generator.py   # bcrypt hashes for sample accounts
 ├── requirements.txt
 ├── run.py
 └── README.md
 ```
-
-## Password Hash Generator
-
-The project includes `password_hash_generator.py` for generating bcrypt password hashes for sample or test accounts.
-
-## Project Background
-
-Originally developed as a postgraduate project at Lincoln University. The codebase has since been refactored for portfolio use: application factory + blueprints, a repository layer for SQL, environment-based configuration, and focused pytest coverage for authentication, access control, and issue workflow.
