@@ -49,7 +49,6 @@ References:
 from flask import Flask, g
 from mysql.connector.pooling import MySQLConnectionPool
 
-# Pool of reusable database connections (created when calling `init_db`).
 connection_pool: MySQLConnectionPool
 
 def init_db(app: Flask, user: str, password: str, host: str, database: str,
@@ -68,7 +67,6 @@ def init_db(app: Flask, user: str, password: str, host: str, database: str,
         pool_name: Name of the pool to create (default `flask_db_pool`).
         autocommit: Whether or not to enable auto-commit (default `True`) .
     """
-    # Create a pool of reusable database connections.
     global connection_pool
     connection_pool = MySQLConnectionPool(
         user=user,
@@ -78,9 +76,6 @@ def init_db(app: Flask, user: str, password: str, host: str, database: str,
         pool_name=pool_name,
         autocommit=autocommit)
 
-    # Register `close_db()` to run every time the application context is torn
-    # down at the end of a Flask request, ensuring that any database connection
-    # using during that request gets released back into the pool.
     app.teardown_appcontext(close_db)
 
 def get_db():
@@ -135,8 +130,6 @@ def close_db(exception = None):
         exception: The exception that terminated the Flask request, or `None`
             if the request terminated successfully.
     """
-    # Get the database connection from the current application context (the one
-    # that's being torn down), or `None` if there is no connection.
     db = g.pop('db', None)
     
     if db is not None:
