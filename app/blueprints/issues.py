@@ -9,7 +9,7 @@ from app.repositories import issues as issues_repo
 issues_bp = Blueprint('issues', __name__)
 
 
-@issues_bp.route('/issues', methods=[constants.HTTP_METHOD_GET])
+@issues_bp.route('/issues', methods=['GET'])
 @login_required
 def issues():
     """
@@ -19,23 +19,23 @@ def issues():
     """
     status = request.args.get(constants.ISSUES_STATUS)
     if not status:
-        flash("Unable to determine the issue status. Please try again.", constants.FLASH_MESSAGE_DANGER)
-        return render_template(constants.TEMPLATE_ISSUES), constants.HTTP_STATUS_CODE_400
+        flash("Unable to determine the issue status. Please try again.", 'danger')
+        return render_template('issues.html'), 400
 
     role = session[constants.USER_ROLE]
     if not role:
-        flash("User role is missing. Please log out and log in again.", constants.FLASH_MESSAGE_DANGER)
-        return render_template(constants.TEMPLATE_ISSUES), constants.HTTP_STATUS_CODE_400
+        flash("User role is missing. Please log out and log in again.", 'danger')
+        return render_template('issues.html'), 400
 
     try:
         issues_list = issues_repo.list_for_role(role, session[constants.USER_ID], status)
-        return render_template(constants.TEMPLATE_ISSUES, issues=issues_list)
+        return render_template('issues.html', issues=issues_list)
     except Exception:
-        flash("An error occurred while processing your request. Please try again.", constants.FLASH_MESSAGE_DANGER)
-        return render_template(constants.TEMPLATE_ISSUES), constants.HTTP_STATUS_CODE_500
+        flash("An error occurred while processing your request. Please try again.", 'danger')
+        return render_template('issues.html'), 500
 
 
-@issues_bp.route('/issues/insert', methods=[constants.HTTP_METHOD_GET, constants.HTTP_METHOD_POST])
+@issues_bp.route('/issues/insert', methods=['GET', 'POST'])
 @login_required
 def issues_insert():
     """
@@ -45,7 +45,7 @@ def issues_insert():
     - POST: Validates and inserts the issue, then redirects to the issues list.
     """
     summary_error = None
-    if (request.method == constants.HTTP_METHOD_POST
+    if (request.method == 'POST'
             and constants.ISSUES_SUMMARY in request.form
             and constants.ISSUES_DESCRIPTION in request.form):
         summary = request.form[constants.ISSUES_SUMMARY]
@@ -57,11 +57,11 @@ def issues_insert():
         if not summary:
             error_messages.append("Summary  cannot be empty.")
         if error_messages:
-            flash(" ".join(error_messages), constants.FLASH_MESSAGE_DANGER)
-            return render_template(constants.TEMPLATE_ISSUES_INSERT), constants.HTTP_STATUS_CODE_400
+            flash(" ".join(error_messages), 'danger')
+            return render_template('issues_insert.html'), 400
         if len(summary) > 255:
             summary_error = "Summary cannot exceed 255 characters."
-            return render_template(constants.TEMPLATE_ISSUES_INSERT,
+            return render_template('issues_insert.html',
                                    summary=summary,
                                    description=description,
                                    summary_error=summary_error)
@@ -70,10 +70,10 @@ def issues_insert():
             issues_repo.create(summary, description, session[constants.USER_ID])
             return redirect(url_for(constants.URL_ISSUES, status=status))
         except Exception:
-            flash("An error occurred while processing your request. Please try again.", constants.FLASH_MESSAGE_DANGER)
-            return render_template(constants.TEMPLATE_ISSUES_INSERT), constants.HTTP_STATUS_CODE_500
+            flash("An error occurred while processing your request. Please try again.", 'danger')
+            return render_template('issues_insert.html'), 500
 
-    return render_template(constants.TEMPLATE_ISSUES_INSERT)
+    return render_template('issues_insert.html')
 
 
 @issues_bp.route('/issue/changestatus', methods=['POST'])
@@ -84,38 +84,38 @@ def change_status():
     issue_id = data.get(constants.ISSUES_ID)
     new_status = data.get(constants.ISSUES_STATUS)
     if not issue_id or not new_status:
-        return jsonify({'error': 'Missing issue_id or status'}), constants.HTTP_STATUS_CODE_400
+        return jsonify({'error': 'Missing issue_id or status'}), 400
 
     try:
         issues_repo.update_status(issue_id, new_status)
         return jsonify({"message": "Status updated successfully."})
     except Exception:
-        return jsonify({"error": "An error occurred while processing your request. Please try again."}), constants.HTTP_STATUS_CODE_500
+        return jsonify({"error": "An error occurred while processing your request. Please try again."}), 500
 
 
-@issues_bp.route('/comments', methods=[constants.HTTP_METHOD_GET])
+@issues_bp.route('/comments', methods=['GET'])
 @login_required
 def comments():
     """Displays comments for a specific issue."""
     issue_id = request.args.get(constants.ISSUES_ID)
     if not issue_id:
-        flash("Unable to retrieve the current issue.", constants.FLASH_MESSAGE_DANGER)
-        return render_template(constants.TEMPLATE_COMMENTS), constants.HTTP_STATUS_CODE_400
+        flash("Unable to retrieve the current issue.", 'danger')
+        return render_template('comments.html'), 400
 
     try:
         comments_list = comments_repo.list_for_issue(issue_id)
     except Exception:
-        flash("An error occurred while processing your request. Please try again.", constants.FLASH_MESSAGE_DANGER)
-        return render_template(constants.TEMPLATE_COMMENTS), constants.HTTP_STATUS_CODE_500
+        flash("An error occurred while processing your request. Please try again.", 'danger')
+        return render_template('comments.html'), 500
 
     return render_template(
-        constants.TEMPLATE_COMMENTS,
+        'comments.html',
         issue_id=issue_id,
         status=request.args.get(constants.ISSUES_STATUS),
         comments=comments_list)
 
 
-@issues_bp.route('/comments/insert', methods=[constants.HTTP_METHOD_GET, constants.HTTP_METHOD_POST])
+@issues_bp.route('/comments/insert', methods=['GET', 'POST'])
 @login_required
 def comments_insert():
     """
@@ -124,7 +124,7 @@ def comments_insert():
     - GET: Renders the comment form.
     - POST: Saves the comment; helpers/admins also set the issue status to open.
     """
-    if request.method == constants.HTTP_METHOD_POST:
+    if request.method == 'POST':
         issue_id = request.form.get(constants.ISSUES_ID)
         issue_status = request.form.get(constants.ISSUES_STATUS)
         content = request.form.get(constants.COMMENTS_CONTENT)
@@ -134,8 +134,8 @@ def comments_insert():
         if not content:
             error_messages.append("Comment content cannot be empty.")
         if error_messages:
-            flash(" ".join(error_messages), constants.FLASH_MESSAGE_DANGER)
-            return render_template(constants.TEMPLATE_COMMENTS_INSERT), constants.HTTP_STATUS_CODE_400
+            flash(" ".join(error_messages), 'danger')
+            return render_template('comments_insert.html'), 400
 
         try:
             comments_repo.create(issue_id, session[constants.USER_ID], content)
@@ -144,7 +144,7 @@ def comments_insert():
                 issues_repo.update_status(issue_id, constants.ISSUES_STATUS_OPEN)
             return redirect(url_for(constants.URL_COMMENTS, issue_id=issue_id, status=issue_status))
         except Exception:
-            flash("An error occurred while processing your request. Please try again.", constants.FLASH_MESSAGE_DANGER)
-            return render_template(constants.TEMPLATE_COMMENTS_INSERT), constants.HTTP_STATUS_CODE_500
+            flash("An error occurred while processing your request. Please try again.", 'danger')
+            return render_template('comments_insert.html'), 500
 
-    return render_template(constants.TEMPLATE_COMMENTS_INSERT)
+    return render_template('comments_insert.html')

@@ -6,7 +6,7 @@ from app import constants
 
 def user_home_url():
     """Returns the homepage URL for the current user, or the login URL if not logged in."""
-    role = session.get(constants.USER_ROLE, None)
+    role = session.get(constants.USER_ROLE)
 
     if role == constants.USER_ROLE_VISITOR:
         home_endpoint = constants.URL_VISITOR_HOME

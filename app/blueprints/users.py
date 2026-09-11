@@ -15,21 +15,21 @@ users_bp = Blueprint('users', __name__)
 @role_required(constants.USER_ROLE_VISITOR)
 def visitor_home():
     """Renders the visitor homepage."""
-    return render_template(constants.TEMPLATE_VISITOR_HOME)
+    return render_template('visitor_home.html')
 
 
 @users_bp.route('/helper/home')
 @role_required(constants.USER_ROLE_HELPER)
 def helper_home():
     """Renders the helper homepage."""
-    return render_template(constants.TEMPLATE_HELPER_HOME)
+    return render_template('helper_home.html')
 
 
 @users_bp.route('/admin/home')
 @role_required(constants.USER_ROLE_ADMIN)
 def admin_home():
     """Renders the admin homepage."""
-    return render_template(constants.TEMPLATE_ADMIN_HOME)
+    return render_template('admin_home.html')
 
 
 @users_bp.route('/userlist')
@@ -39,31 +39,31 @@ def user_list():
     try:
         users = users_repo.list_all_ordered_by_status()
     except Exception:
-        flash("An error occurred while processing your request. Please try again.", constants.FLASH_MESSAGE_DANGER)
-        return render_template(constants.TEMPLATE_USER_LIST, users=[]), constants.HTTP_STATUS_CODE_500
+        flash("An error occurred while processing your request. Please try again.", 'danger')
+        return render_template('user_list.html', users=[]), 500
 
-    return render_template(constants.TEMPLATE_USER_LIST, users=users)
+    return render_template('user_list.html', users=users)
 
 
-@users_bp.route('/user/changeBatchStatus', methods=[constants.HTTP_METHOD_POST])
+@users_bp.route('/user/changeBatchStatus', methods=['POST'])
 @login_and_role_required([constants.USER_ROLE_ADMIN])
 def change_user_status():
     """Batch-updates status for selected users (admin only)."""
     data = request.get_json()
-    user_ids = data.get(constants.USER_IDS_KEY)
+    user_ids = data.get(constants.USER_IDS)
     status = data.get(constants.USER_STATUS)
     if not user_ids:
-        return jsonify({"error": "No user IDs provided. Please select at least one user to update status."}), constants.HTTP_STATUS_CODE_400
+        return jsonify({"error": "No user IDs provided. Please select at least one user to update status."}), 400
 
     try:
         users_repo.update_status_for_ids(user_ids, status)
     except Exception:
-        return jsonify({"error": "An error occurred while processing your request. Please try again."}), constants.HTTP_STATUS_CODE_500
+        return jsonify({"error": "An error occurred while processing your request. Please try again."}), 500
 
     return jsonify({"message": "Status updated successfully."})
 
 
-@users_bp.route('/user/changeRole', methods=[constants.HTTP_METHOD_POST])
+@users_bp.route('/user/changeRole', methods=['POST'])
 @login_and_role_required([constants.USER_ROLE_ADMIN])
 def change_user_role():
     """Changes a user's role (admin only)."""
@@ -71,12 +71,12 @@ def change_user_role():
     user_id = data.get(constants.USER_ID)
     role = data.get(constants.USER_ROLE)
     if not user_id or not role:
-        return jsonify({"error": "Invalid data provided. User ID and role are required."}), constants.HTTP_STATUS_CODE_400
+        return jsonify({"error": "Invalid data provided. User ID and role are required."}), 400
 
     try:
         users_repo.update_role(user_id, role)
     except Exception:
-        return jsonify({"error": "An error occurred while processing your request. Please try again."}), constants.HTTP_STATUS_CODE_500
+        return jsonify({"error": "An error occurred while processing your request. Please try again."}), 500
 
     return jsonify({"message": "Role updated successfully."})
 
@@ -93,17 +93,17 @@ def profile():
     try:
         profile_data = users_repo.get_profile(session[constants.USER_ID])
         if profile_data is None:
-            flash("User profile not found.", constants.FLASH_MESSAGE_DANGER)
-            return render_template(constants.TEMPLATE_PROFILE, profile=profile_data), constants.HTTP_STATUS_CODE_404
+            flash("User profile not found.", 'danger')
+            return render_template('profile.html', profile=profile_data), 404
     except Exception:
-        flash("An error occurred while processing your request. Please try again.", constants.FLASH_MESSAGE_DANGER)
-        return render_template(constants.TEMPLATE_PROFILE, profile=profile_data), constants.HTTP_STATUS_CODE_500
+        flash("An error occurred while processing your request. Please try again.", 'danger')
+        return render_template('profile.html', profile=profile_data), 500
 
-    mode = request.args.get(constants.URL_PARAMETER_MODE, '')
-    return render_template(constants.TEMPLATE_PROFILE, mode=mode, profile=profile_data)
+    mode = request.args.get('mode', '')
+    return render_template('profile.html', mode=mode, profile=profile_data)
 
 
-@users_bp.route('/profile/edit', methods=[constants.HTTP_METHOD_POST])
+@users_bp.route('/profile/edit', methods=['POST'])
 @login_required
 def profile_edit():
     """Updates the logged-in user's profile details and optional profile image."""
@@ -123,8 +123,8 @@ def profile_edit():
         uploaded_image = request.files.get(constants.USER_PROFILE_IMAGE)
 
         if not email or not first_name or not last_name or not location or not username:
-            flash("Required fields are missing.", constants.FLASH_MESSAGE_DANGER)
-            return render_template(constants.TEMPLATE_PROFILE, mode=constants.URL_PARAMETER_MODE_EDIT), constants.HTTP_STATUS_CODE_400
+            flash("Required fields are missing.", 'danger')
+            return render_template('profile.html', mode='edit'), 400
 
         role = session.get(constants.USER_ROLE)
         profile_data = {
@@ -136,17 +136,17 @@ def profile_edit():
             constants.USER_ROLE: role
         }
         if not role:
-            flash("User role is missing. Please log out and log in again.", constants.FLASH_MESSAGE_DANGER)
-            return render_template(constants.TEMPLATE_PROFILE,
-                                   mode=constants.URL_PARAMETER_MODE_EDIT,
-                                   profile=profile_data), constants.HTTP_STATUS_CODE_400
+            flash("User role is missing. Please log out and log in again.", 'danger')
+            return render_template('profile.html',
+                                   mode='edit',
+                                   profile=profile_data), 400
 
         email_error, password_error, first_name_error, last_name_error, location_error = validate_profile_details(
             email, '', '', first_name, last_name, location)
 
         if email_error or first_name_error or last_name_error or location_error:
-            return render_template(constants.TEMPLATE_PROFILE,
-                                   mode=constants.URL_PARAMETER_MODE_EDIT,
+            return render_template('profile.html',
+                                   mode='edit',
                                    profile=profile_data,
                                    email_error=email_error,
                                    first_name_error=first_name_error,
@@ -160,10 +160,10 @@ def profile_edit():
                 os.makedirs(folder_path)
             filename = constants.USER_PROFILE_IMAGE + '_' + session[constants.USERNAME] + file_extension
             if not allowed_file(filename):
-                flash("The uploaded profile image type is not jpg, jpeg, or png.", constants.FLASH_MESSAGE_DANGER)
-                return render_template(constants.TEMPLATE_PROFILE,
-                                       mode=constants.URL_PARAMETER_MODE_EDIT,
-                                       profile=profile_data), constants.HTTP_STATUS_CODE_400
+                flash("The uploaded profile image type is not jpg, jpeg, or png.", 'danger')
+                return render_template('profile.html',
+                                       mode='edit',
+                                       profile=profile_data), 400
             filepath = os.path.join(folder_path, filename)
             uploaded_image.save(filepath)
             new_profile_image = os.path.join(constants.STATIC_IMAGES_URL, filename)
@@ -182,10 +182,10 @@ def profile_edit():
                 new_profile_image)
             return redirect(url_for(constants.URL_PROFILE))
         except Exception:
-            flash("An error occurred while processing your request. Please try again.", constants.FLASH_MESSAGE_DANGER)
-            return render_template(constants.TEMPLATE_PROFILE, profile=profile_data), constants.HTTP_STATUS_CODE_500
+            flash("An error occurred while processing your request. Please try again.", 'danger')
+            return render_template('profile.html', profile=profile_data), 500
 
-    return render_template(constants.TEMPLATE_LOGIN)
+    return render_template('login.html')
 
 
 def allowed_file(filename):

@@ -32,7 +32,7 @@ def role_required(required_role):
             if constants.SESSION_LOGGED_IN not in session:
                 return redirect(url_for(constants.URL_LOGIN))
             elif session.get(constants.USER_ROLE) != required_role:
-                return render_template(constants.TEMPLATE_ACCESS_DENIED), constants.HTTP_STATUS_CODE_403
+                return render_template('access_denied.html'), 403
             return f(*args, **kwargs)
         return decorated_function
     return decorator
@@ -51,7 +51,7 @@ def login_and_role_required(allowed_roles):
             if constants.SESSION_LOGGED_IN not in session:
                 return redirect(url_for(constants.URL_LOGIN))
             elif session.get(constants.USER_ROLE) not in allowed_roles:
-                return render_template(constants.TEMPLATE_ACCESS_DENIED), constants.HTTP_STATUS_CODE_403
+                return render_template('access_denied.html'), 403
             return f(*args, **kwargs)
         return decorated_function
     return decorator

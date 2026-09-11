@@ -19,7 +19,7 @@ def root():
     return redirect(user_home_url())
 
 
-@auth_bp.route('/login', methods=[constants.HTTP_METHOD_GET, constants.HTTP_METHOD_POST])
+@auth_bp.route('/login', methods=['GET', 'POST'])
 @if_logged_in_redirect
 def login():
     """
@@ -29,20 +29,20 @@ def login():
     - POST: Authenticates the user; redirects to homepage on success,
       or re-renders login with errors on failure.
     """
-    if request.method == constants.HTTP_METHOD_POST and constants.USERNAME in request.form and constants.PASSWORD in request.form:
+    if request.method == 'POST' and constants.USERNAME in request.form and constants.PASSWORD in request.form:
         username = request.form[constants.USERNAME]
         password = request.form[constants.PASSWORD]
         if not username or not password:
-            flash("Please enter both username and password.", constants.FLASH_MESSAGE_DANGER)
-            return render_template(constants.TEMPLATE_LOGIN)
+            flash("Please enter both username and password.", 'danger')
+            return render_template('login.html')
 
         try:
             account = users_repo.find_by_username(username)
             if account is not None:
                 # Inactive users cannot log in
                 if account[constants.USER_STATUS] == constants.USER_STATUS_INACTIVE:
-                    flash("User is inactive", constants.FLASH_MESSAGE_DANGER)
-                    return render_template(constants.TEMPLATE_LOGIN, username=username)
+                    flash("User is inactive", 'danger')
+                    return render_template('login.html', username=username)
                 password_hash = account[constants.PASSWORD_HASH]
                 if bcrypt.check_password_hash(password_hash, password):
                     session[constants.SESSION_LOGGED_IN] = True
@@ -50,19 +50,19 @@ def login():
                     session[constants.USERNAME] = account[constants.USERNAME]
                     session[constants.USER_ROLE] = account[constants.USER_ROLE]
                     return redirect(user_home_url())
-                return render_template(constants.TEMPLATE_LOGIN,
+                return render_template('login.html',
                                        username=username,
                                        password_invalid=True)
-            flash("No matching username found.", constants.FLASH_MESSAGE_DANGER)
-            return render_template(constants.TEMPLATE_LOGIN)
+            flash("No matching username found.", 'danger')
+            return render_template('login.html')
         except Exception:
-            flash("An error occurred while processing your request. Please try again.", constants.FLASH_MESSAGE_DANGER)
-            return render_template(constants.TEMPLATE_LOGIN), constants.HTTP_STATUS_CODE_500
+            flash("An error occurred while processing your request. Please try again.", 'danger')
+            return render_template('login.html'), 500
 
-    return render_template(constants.TEMPLATE_LOGIN)
+    return render_template('login.html')
 
 
-@auth_bp.route('/signup', methods=[constants.HTTP_METHOD_GET, constants.HTTP_METHOD_POST])
+@auth_bp.route('/signup', methods=['GET', 'POST'])
 @if_logged_in_redirect
 def signup():
     """
@@ -71,7 +71,7 @@ def signup():
     - GET: Renders the signup page.
     - POST: Validates form data and creates a new account if valid.
     """
-    if (request.method == constants.HTTP_METHOD_POST
+    if (request.method == 'POST'
             and constants.USERNAME in request.form
             and constants.EMAIL in request.form
             and constants.PASSWORD in request.form
@@ -87,29 +87,29 @@ def signup():
         last_name = request.form[constants.LAST_NAME]
         location = request.form[constants.LOCATION]
         if not password or not confirm_password or not email or not first_name or not last_name or not location or not username:
-            flash("Required fields are missing.", constants.FLASH_MESSAGE_DANGER)
-            return render_template(constants.TEMPLATE_SIGNUP,
+            flash("Required fields are missing.", 'danger')
+            return render_template('signup.html',
                                    username=username,
                                    email=email,
                                    password=password,
                                    confirm_password=confirm_password,
                                    first_name=first_name,
                                    last_name=last_name,
-                                   location=location), constants.HTTP_STATUS_CODE_400
+                                   location=location), 400
 
         username_error = None
         try:
             account_already_exists = users_repo.username_exists(username)
         except Exception:
-            flash("An error occurred while processing your request. Please try again.", constants.FLASH_MESSAGE_DANGER)
-            return render_template(constants.TEMPLATE_SIGNUP,
+            flash("An error occurred while processing your request. Please try again.", 'danger')
+            return render_template('signup.html',
                                    username=username,
                                    email=email,
                                    password=password,
                                    confirm_password=confirm_password,
                                    first_name=first_name,
                                    last_name=last_name,
-                                   location=location), constants.HTTP_STATUS_CODE_500
+                                   location=location), 500
 
         if account_already_exists:
             username_error = 'An account already exists with this username.'
@@ -120,7 +120,7 @@ def signup():
         email_error, password_error, first_name_error, last_name_error, location_error = validate_profile_details(
             email, password, confirm_password, first_name, last_name, location)
         if (username_error or email_error or password_error or first_name_error or last_name_error or location_error):
-            return render_template(constants.TEMPLATE_SIGNUP, username=username, email=email, first_name=first_name,
+            return render_template('signup.html', username=username, email=email, first_name=first_name,
                                    last_name=last_name, location=location, username_error=username_error,
                                    email_error=email_error, password_error=password_error,
                                    first_name_error=first_name_error,
@@ -130,22 +130,22 @@ def signup():
         try:
             users_repo.create_user(username, password_hash, email, first_name, last_name, location)
         except Exception:
-            flash("An error occurred while processing your request. Please try again.", constants.FLASH_MESSAGE_DANGER)
-            return render_template(constants.TEMPLATE_SIGNUP,
+            flash("An error occurred while processing your request. Please try again.", 'danger')
+            return render_template('signup.html',
                                    username=username,
                                    email=email,
                                    password=password,
                                    confirm_password=confirm_password,
                                    first_name=first_name,
                                    last_name=last_name,
-                                   location=location), constants.HTTP_STATUS_CODE_500
+                                   location=location), 500
 
-        return render_template(constants.TEMPLATE_SIGNUP, signup_successful=True)
+        return render_template('signup.html', signup_successful=True)
 
-    return render_template(constants.TEMPLATE_SIGNUP)
+    return render_template('signup.html')
 
 
-@auth_bp.route('/resetpassword', methods=[constants.HTTP_METHOD_GET, constants.HTTP_METHOD_POST])
+@auth_bp.route('/resetpassword', methods=['GET', 'POST'])
 def resetpassword():
     """
     Handles password reset.
@@ -153,7 +153,7 @@ def resetpassword():
     - GET: Renders the reset password page.
     - POST: Validates and updates the password if valid.
     """
-    if (request.method == constants.HTTP_METHOD_POST
+    if (request.method == 'POST'
             and constants.PASSWORD in request.form
             and constants.CONFIRM_PASSWORD in request.form
             and constants.USERNAME in request.form):
@@ -161,35 +161,35 @@ def resetpassword():
         confirm_password = request.form[constants.CONFIRM_PASSWORD]
         username = request.form[constants.USERNAME]
         if not password or not confirm_password or not username:
-            flash("Required fields are missing.", constants.FLASH_MESSAGE_DANGER)
-            return render_template(constants.TEMPLATE_RESETPASSWORD, username=username), constants.HTTP_STATUS_CODE_400
+            flash("Required fields are missing.", 'danger')
+            return render_template('resetpassword.html', username=username), 400
 
         try:
             user = users_repo.find_auth_by_username(username)
             if not user:
-                flash("User does not exist.", constants.FLASH_MESSAGE_DANGER)
-                return render_template(constants.TEMPLATE_RESETPASSWORD, username=username), constants.HTTP_STATUS_CODE_400
+                flash("User does not exist.", 'danger')
+                return render_template('resetpassword.html', username=username), 400
 
             password_error = validate_password(password, confirm_password)
             if not password_error:
                 old_hashed_password = user[constants.PASSWORD_HASH]
                 if bcrypt.check_password_hash(old_hashed_password, password):
-                    flash("The new password cannot be the same as the original password.", constants.FLASH_MESSAGE_DANGER)
-                    return render_template(constants.TEMPLATE_RESETPASSWORD,
-                                           username=username), constants.HTTP_STATUS_CODE_400
+                    flash("The new password cannot be the same as the original password.", 'danger')
+                    return render_template('resetpassword.html',
+                                           username=username), 400
             if password_error:
-                return render_template(constants.TEMPLATE_RESETPASSWORD,
+                return render_template('resetpassword.html',
                                        username=username,
                                        password_error=password_error)
 
             users_repo.update_password_hash(
                 user[constants.USER_ID],
                 bcrypt.generate_password_hash(password))
-            return render_template(constants.TEMPLATE_RESETPASSWORD, reset_password_successful=True)
+            return render_template('resetpassword.html', reset_password_successful=True)
         except Exception:
-            flash("An error occurred while processing your request. Please try again.", constants.FLASH_MESSAGE_DANGER)
-            return render_template(constants.TEMPLATE_RESETPASSWORD, username=username), constants.HTTP_STATUS_CODE_500
-    return render_template(constants.TEMPLATE_RESETPASSWORD)
+            flash("An error occurred while processing your request. Please try again.", 'danger')
+            return render_template('resetpassword.html', username=username), 500
+    return render_template('resetpassword.html')
 
 
 @auth_bp.route('/logout')
