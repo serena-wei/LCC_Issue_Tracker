@@ -181,6 +181,14 @@ python run.py
 
 The terminal will display the local URL for the Flask application.
 
+### 7. Run tests
+
+Tests need a configured database (same `.env` as the app) and the sample data from `populate_database.sql`.
+
+```bash
+pytest
+```
+
 ## Demo Accounts
 
 The sample database includes accounts for each role:
