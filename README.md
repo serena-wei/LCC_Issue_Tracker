@@ -248,4 +248,4 @@ The project includes `password_hash_generator.py` for generating bcrypt password
 
 ## Project Background
 
-This project was developed as part of my postgraduate study at Lincoln University. It provided practical experience building a Python/Flask web application with MySQL, authentication, role-based access control, and server-side business logic.
+Originally developed as a postgraduate project at Lincoln University. The codebase has since been refactored for portfolio use: application factory + blueprints, a repository layer for SQL, environment-based configuration, and focused pytest coverage for authentication, access control, and issue workflow.
