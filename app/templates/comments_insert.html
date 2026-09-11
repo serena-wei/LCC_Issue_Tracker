@@ -1,42 +1,45 @@
 {% extends 'userbase.html' %}
 
-{% block title %}Comments Insert{% endblock %}
-
+{% block title %}Add comment{% endblock %}
 {% set active_page = 'comments_insert' %}
 
 {% block content %}
-<section class="container d-flex justify-content-center mt-5">
-    <div class="w-100 w-sm-75 w-md-50">
-        {% with messages = get_flashed_messages(with_categories=True) %}
-            {% if messages %}
-                <div class="mb-3">
-                    {% for category, message in messages %}
-                        <div class="alert alert-{{ category }} w-100">{{ message }}</div>
-                    {% endfor %}
-                </div>
-            {% endif %}
-        {% endwith %}
+<section class="page-shell" style="max-width: 900px;">
+  <div class="page-header">
+    <h1>Add a comment</h1>
+    <p>Share an update or ask a follow-up question on this issue.</p>
+  </div>
 
-        <form action="/comments/insert" method="POST">
-            <input type="hidden" name="status" value="{{ request.args.get('status') }}">
-            <input type="hidden" name="issue_id" value="{{ request.args.get('issue_id') }}">
-            <div class="mb-3">
-                <label for="content" class="form-label">Description</label>
-                <textarea id="content" name="content" class="form-control" rows="4" required>{{ content }}</textarea>
-            </div>
-            <div class="d-flex flex-column flex-sm-row justify-content-center mt-3">
-                <button type="submit" class="btn btn-success px-3 w-100 w-sm-50 me-2 mb-2 mb-sm-0">Save</button>
-                <a href="/comments?issue_id={{ request.args.get('issue_id') }}&status={{ request.args.get('status') }}" class="btn btn-primary px-3 w-100 w-sm-50 me-2 mb-2 mb-sm-0">Back</a>
-                <button type="button" class="btn btn-secondary px-3 w-100 w-sm-50 me-2 mb-2 mb-sm-0" onclick="clearForm()">Cancel</button>
-            </div>
-        </form>
-    </div>
+  {% with messages = get_flashed_messages(with_categories=True) %}
+    {% if messages %}
+      <div class="mb-3">
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }} w-100">{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <div class="surface">
+    <form action="/comments/insert" method="POST">
+      <input type="hidden" name="status" value="{{ request.args.get('status') }}">
+      <input type="hidden" name="issue_id" value="{{ request.args.get('issue_id') }}">
+      <div class="mb-4">
+        <label for="content" class="form-label">Comment</label>
+        <textarea id="content" name="content" class="form-control" rows="5" required>{{ content }}</textarea>
+      </div>
+      <div class="d-flex flex-wrap gap-2">
+        <button type="submit" class="btn btn-primary">Save</button>
+        <a href="/comments?issue_id={{ request.args.get('issue_id') }}&status={{ request.args.get('status') }}" class="btn btn-outline-primary">Back</a>
+        <button type="button" class="btn btn-secondary" onclick="clearForm()">Clear</button>
+      </div>
+    </form>
+  </div>
 </section>
 
 <script>
-    function clearForm() {
-        // Clear the content of the textarea
-        document.getElementById("content").value = "";
-    }
+  function clearForm() {
+    document.getElementById("content").value = "";
+  }
 </script>
 {% endblock %}

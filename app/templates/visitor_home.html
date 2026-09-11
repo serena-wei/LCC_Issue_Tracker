@@ -1,29 +1,23 @@
 {% extends 'userbase.html' %}
 
 {% block title %}Visitor Home{% endblock %}
-
 {% set active_page = 'home' %}
 
 {% block content %}
-<section class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-12 col-sm-10 col-md-8 col-lg-6 text-center">
-            <h2 class="mb-4">Welcome to the Lincoln Community Campground (LCC) Issue Tracker</h2>
-            <p class="text-muted">
-                This system helps you quickly report campground issues and track their resolution progress. Your current role is <strong>Visitor</strong>.
-            </p>
-            <div class="mt-4">
-                <h4 class="mb-3">As a visitor, you can:</h4>
-                <ul class="list-group text-start d-inline-block">
-                    <li class="list-group-item">Register a new account</li>
-                    <li class="list-group-item">Reset your password</li>
-                    <li class="list-group-item">View and update your profile details</li>
-                    <li class="list-group-item">View issues you have reported</li>
-                    <li class="list-group-item">Comment on the issues you have submitted</li>
-                    <li class="list-group-item">See comments from other users on your issues</li>
-                </ul>
-            </div>
-        </div>
+<section class="page-shell">
+  <div class="surface welcome-panel">
+    <p class="role-badge mb-3">Visitor</p>
+    <h2>Track campground issues with clarity</h2>
+    <p class="lead">Report problems, follow updates, and keep your profile current in the Lincoln Community Campground tracker.</p>
+    <div class="d-flex flex-wrap gap-2 mt-4">
+      <a class="btn btn-primary" href="{{ url_for('issues.issues', status='unresolved') }}">View unresolved issues</a>
+      <a class="btn btn-outline-primary" href="{{ url_for('users.profile') }}">Open profile</a>
     </div>
+    <ul class="capability-list">
+      <li>Create and follow your own unresolved and resolved issues</li>
+      <li>Add comments on issues you reported</li>
+      <li>Update your profile details and photo</li>
+    </ul>
+  </div>
 </section>
 {% endblock %}
