@@ -151,19 +151,27 @@ Run the following SQL scripts in order:
 
 `populate_database.sql` inserts the sample users, issues, and comments.
 
-### 5. Configure the database connection
+### 5. Configure the application
 
-Create a local `connect.py` file under the `app` directory with your MySQL connection details:
+Copy the example environment file and set your local values:
 
-```python
-dbuser = "your_username"
-dbpass = "your_password"
-dbhost = "localhost"
-dbport = 3306
-dbname = "lcc_issue_tracker_db"
+```bash
+cp .env.example .env
 ```
 
-Do not commit `connect.py` if it contains local database credentials.
+Edit `.env`:
+
+```env
+SECRET_KEY=replace-with-a-long-random-string
+DB_USER=your_username
+DB_PASSWORD=your_password
+DB_HOST=localhost
+DB_PORT=3306
+DB_NAME=lcc_issue_tracker_db
+```
+
+Do not commit `.env` — it is listed in `.gitignore`.
+Settings are loaded in `app/config.py` and applied by `create_app()`.
 
 ### 6. Start the application
 
@@ -190,20 +198,19 @@ These accounts are provided for local testing only.
 ```text
 LCC_Issue_Tracker/
 ├── app/
+│   ├── blueprints/          # HTTP routes (auth, users, issues)
+│   ├── repositories/        # Database access
 │   ├── static/
-│   │   └── images/
 │   ├── templates/
-│   ├── __init__.py
-│   ├── admin.py
-│   ├── comments.py
+│   ├── __init__.py          # create_app()
+│   ├── config.py            # Loads settings from environment
 │   ├── constants.py
 │   ├── db.py
 │   ├── decorators.py
-│   ├── helper.py
-│   ├── issues.py
-│   ├── profile.py
-│   ├── user.py
-│   └── visitor.py
+│   ├── extensions.py
+│   ├── utils.py
+│   └── validators.py
+├── .env.example
 ├── create_database.sql
 ├── populate_database.sql
 ├── password_hash_generator.py

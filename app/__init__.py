@@ -1,18 +1,24 @@
 """Flask application factory."""
 from flask import Flask
 
+from app.config import Config
 
-def create_app():
+
+def create_app(config_class=Config):
     """Create and configure the LCC Issue Tracker Flask app."""
     app = Flask(__name__)
+    app.config.from_object(config_class)
 
-    # Anyone with access to this key can pretend to be signed in as any user.
-    app.secret_key = 'Example Secret Key (CHANGE THIS TO YOUR OWN SECRET KEY!)'
-
-    from app import connect, db
+    from app import db
     from app.extensions import bcrypt
 
-    db.init_db(app, connect.dbuser, connect.dbpass, connect.dbhost, connect.dbname)
+    db.init_db(
+        app,
+        app.config['DB_USER'],
+        app.config['DB_PASSWORD'],
+        app.config['DB_HOST'],
+        app.config['DB_NAME'],
+    )
     bcrypt.init_app(app)
 
     from app.blueprints.auth import auth_bp
