@@ -3,9 +3,10 @@ import re
 
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
-from app import constants, db
+from app import constants
 from app.decorators import if_logged_in_redirect
 from app.extensions import bcrypt
+from app.repositories import users as users_repo
 from app.utils import user_home_url
 from app.validators import validate_password, validate_profile_details
 
@@ -36,33 +37,24 @@ def login():
             return render_template(constants.TEMPLATE_LOGIN)
 
         try:
-            with db.get_cursor() as cursor:
-                cursor.execute('''
-                            SELECT user_id, username, password_hash, role, status
-                            FROM users
-                            WHERE username = %s;
-                            ''', (username,))
-                account = cursor.fetchone()
-                if account is not None:
-                    # Inactive users cannot log in
-                    if account[constants.USER_STATUS] == constants.USER_STATUS_INACTIVE:
-                        flash("User is inactive", constants.FLASH_MESSAGE_DANGER)
-                        return render_template(constants.TEMPLATE_LOGIN, username=username)
-                    password_hash = account[constants.PASSWORD_HASH]
-                    if bcrypt.check_password_hash(password_hash, password):
-                        session[constants.SESSION_LOGGED_IN] = True
-                        session[constants.USER_ID] = account[constants.USER_ID]
-                        session[constants.USERNAME] = account[constants.USERNAME]
-                        session[constants.USER_ROLE] = account[constants.USER_ROLE]
-
-                        return redirect(user_home_url())
-                    else:
-                        return render_template(constants.TEMPLATE_LOGIN,
-                                               username=username,
-                                               password_invalid=True)
-                else:
-                    flash("No matching username found.", constants.FLASH_MESSAGE_DANGER)
-                    return render_template(constants.TEMPLATE_LOGIN)
+            account = users_repo.find_by_username(username)
+            if account is not None:
+                # Inactive users cannot log in
+                if account[constants.USER_STATUS] == constants.USER_STATUS_INACTIVE:
+                    flash("User is inactive", constants.FLASH_MESSAGE_DANGER)
+                    return render_template(constants.TEMPLATE_LOGIN, username=username)
+                password_hash = account[constants.PASSWORD_HASH]
+                if bcrypt.check_password_hash(password_hash, password):
+                    session[constants.SESSION_LOGGED_IN] = True
+                    session[constants.USER_ID] = account[constants.USER_ID]
+                    session[constants.USERNAME] = account[constants.USERNAME]
+                    session[constants.USER_ROLE] = account[constants.USER_ROLE]
+                    return redirect(user_home_url())
+                return render_template(constants.TEMPLATE_LOGIN,
+                                       username=username,
+                                       password_invalid=True)
+            flash("No matching username found.", constants.FLASH_MESSAGE_DANGER)
+            return render_template(constants.TEMPLATE_LOGIN)
         except Exception:
             flash("An error occurred while processing your request. Please try again.", constants.FLASH_MESSAGE_DANGER)
             return render_template(constants.TEMPLATE_LOGIN), constants.HTTP_STATUS_CODE_500
@@ -107,10 +99,7 @@ def signup():
 
         username_error = None
         try:
-            with db.get_cursor() as cursor:
-                cursor.execute('SELECT user_id FROM users WHERE username = %s;',
-                               (username,))
-                account_already_exists = cursor.fetchone() is not None
+            account_already_exists = users_repo.username_exists(username)
         except Exception:
             flash("An error occurred while processing your request. Please try again.", constants.FLASH_MESSAGE_DANGER)
             return render_template(constants.TEMPLATE_SIGNUP,
@@ -136,30 +125,22 @@ def signup():
                                    email_error=email_error, password_error=password_error,
                                    first_name_error=first_name_error,
                                    last_name_error=last_name_error, location_error=location_error)
-        else:
-            password_hash = bcrypt.generate_password_hash(password)
-            try:
-                with db.get_cursor() as cursor:
-                    cursor.execute('''
-                                INSERT INTO users (username, password_hash, email, first_name, last_name, location, role, profile_image, status)
-                                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);
-                                ''',
-                                   (username, password_hash, email, first_name, last_name, location,
-                                    constants.USER_ROLE_VISITOR,
-                                    constants.STATIC_IMAGES_URL + constants.DEFAULT_PROFILE_IMAGE_NAME,
-                                    constants.USER_STATUS_ACTIVE))
-            except Exception:
-                flash("An error occurred while processing your request. Please try again.", constants.FLASH_MESSAGE_DANGER)
-                return render_template(constants.TEMPLATE_SIGNUP,
-                                       username=username,
-                                       email=email,
-                                       password=password,
-                                       confirm_password=confirm_password,
-                                       first_name=first_name,
-                                       last_name=last_name,
-                                       location=location), constants.HTTP_STATUS_CODE_500
 
-            return render_template(constants.TEMPLATE_SIGNUP, signup_successful=True)
+        password_hash = bcrypt.generate_password_hash(password)
+        try:
+            users_repo.create_user(username, password_hash, email, first_name, last_name, location)
+        except Exception:
+            flash("An error occurred while processing your request. Please try again.", constants.FLASH_MESSAGE_DANGER)
+            return render_template(constants.TEMPLATE_SIGNUP,
+                                   username=username,
+                                   email=email,
+                                   password=password,
+                                   confirm_password=confirm_password,
+                                   first_name=first_name,
+                                   last_name=last_name,
+                                   location=location), constants.HTTP_STATUS_CODE_500
+
+        return render_template(constants.TEMPLATE_SIGNUP, signup_successful=True)
 
     return render_template(constants.TEMPLATE_SIGNUP)
 
@@ -184,30 +165,27 @@ def resetpassword():
             return render_template(constants.TEMPLATE_RESETPASSWORD, username=username), constants.HTTP_STATUS_CODE_400
 
         try:
-            with db.get_cursor() as cursor:
-                cursor.execute('SELECT user_id, password_hash FROM users WHERE username = %s;',
-                               (username,))
-                user = cursor.fetchone()
+            user = users_repo.find_auth_by_username(username)
             if not user:
                 flash("User does not exist.", constants.FLASH_MESSAGE_DANGER)
                 return render_template(constants.TEMPLATE_RESETPASSWORD, username=username), constants.HTTP_STATUS_CODE_400
-            else:
-                password_error = validate_password(password, confirm_password)
-                if not password_error:
-                    old_hashed_password = user[constants.PASSWORD_HASH]
-                    if bcrypt.check_password_hash(old_hashed_password, password):
-                        flash("The new password cannot be the same as the original password.", constants.FLASH_MESSAGE_DANGER)
-                        return render_template(constants.TEMPLATE_RESETPASSWORD,
-                                               username=username), constants.HTTP_STATUS_CODE_400
+
+            password_error = validate_password(password, confirm_password)
+            if not password_error:
+                old_hashed_password = user[constants.PASSWORD_HASH]
+                if bcrypt.check_password_hash(old_hashed_password, password):
+                    flash("The new password cannot be the same as the original password.", constants.FLASH_MESSAGE_DANGER)
+                    return render_template(constants.TEMPLATE_RESETPASSWORD,
+                                           username=username), constants.HTTP_STATUS_CODE_400
             if password_error:
                 return render_template(constants.TEMPLATE_RESETPASSWORD,
                                        username=username,
                                        password_error=password_error)
-            else:
-                with db.get_cursor() as cursor:
-                    cursor.execute('UPDATE users SET password_hash=%s WHERE user_id = %s;',
-                                   (bcrypt.generate_password_hash(password), user[constants.USER_ID]))
-                return render_template(constants.TEMPLATE_RESETPASSWORD, reset_password_successful=True)
+
+            users_repo.update_password_hash(
+                user[constants.USER_ID],
+                bcrypt.generate_password_hash(password))
+            return render_template(constants.TEMPLATE_RESETPASSWORD, reset_password_successful=True)
         except Exception:
             flash("An error occurred while processing your request. Please try again.", constants.FLASH_MESSAGE_DANGER)
             return render_template(constants.TEMPLATE_RESETPASSWORD, username=username), constants.HTTP_STATUS_CODE_500

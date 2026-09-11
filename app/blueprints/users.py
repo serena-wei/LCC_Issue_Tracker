@@ -3,8 +3,9 @@ import os
 
 from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, session, url_for
 
-from app import constants, db
+from app import constants
 from app.decorators import login_and_role_required, login_required, role_required
+from app.repositories import users as users_repo
 from app.validators import validate_profile_details
 
 users_bp = Blueprint('users', __name__)
@@ -36,9 +37,7 @@ def admin_home():
 def user_list():
     """Displays the user list page (admin only)."""
     try:
-        with db.get_cursor() as cursor:
-            cursor.execute('SELECT * FROM users ORDER BY status;')
-            users = cursor.fetchall()
+        users = users_repo.list_all_ordered_by_status()
     except Exception:
         flash("An error occurred while processing your request. Please try again.", constants.FLASH_MESSAGE_DANGER)
         return render_template(constants.TEMPLATE_USER_LIST, users=[]), constants.HTTP_STATUS_CODE_500
@@ -53,19 +52,13 @@ def change_user_status():
     data = request.get_json()
     user_ids = data.get(constants.USER_IDS_KEY)
     status = data.get(constants.USER_STATUS)
-    if user_ids:
-        user_ids_list = user_ids
-        placeholders = ', '.join(['%s'] * len(user_ids_list))
-
-        try:
-            with db.get_cursor() as cursor:
-                cursor.execute(
-                    f'UPDATE users SET status = %s WHERE user_id IN ({placeholders});',
-                    [status] + user_ids_list)
-        except Exception:
-            return jsonify({"error": "An error occurred while processing your request. Please try again."}), constants.HTTP_STATUS_CODE_500
-    else:
+    if not user_ids:
         return jsonify({"error": "No user IDs provided. Please select at least one user to update status."}), constants.HTTP_STATUS_CODE_400
+
+    try:
+        users_repo.update_status_for_ids(user_ids, status)
+    except Exception:
+        return jsonify({"error": "An error occurred while processing your request. Please try again."}), constants.HTTP_STATUS_CODE_500
 
     return jsonify({"message": "Status updated successfully."})
 
@@ -77,14 +70,13 @@ def change_user_role():
     data = request.get_json()
     user_id = data.get(constants.USER_ID)
     role = data.get(constants.USER_ROLE)
-    if user_id and role:
-        try:
-            with db.get_cursor() as cursor:
-                cursor.execute('UPDATE users SET role = %s WHERE user_id = %s;', [role, user_id])
-        except Exception:
-            return jsonify({"error": "An error occurred while processing your request. Please try again."}), constants.HTTP_STATUS_CODE_500
-    else:
+    if not user_id or not role:
         return jsonify({"error": "Invalid data provided. User ID and role are required."}), constants.HTTP_STATUS_CODE_400
+
+    try:
+        users_repo.update_role(user_id, role)
+    except Exception:
+        return jsonify({"error": "An error occurred while processing your request. Please try again."}), constants.HTTP_STATUS_CODE_500
 
     return jsonify({"message": "Role updated successfully."})
 
@@ -97,22 +89,18 @@ def profile():
 
     Supports view and edit modes via the `mode` URL parameter.
     """
-    profile = None
+    profile_data = None
     try:
-        with db.get_cursor() as cursor:
-            cursor.execute(
-                'SELECT username, email, role, first_name, last_name, location, profile_image FROM users WHERE user_id = %s;',
-                (session[constants.USER_ID],))
-            profile = cursor.fetchone()
-            if profile is None:
-                flash("User profile not found.", constants.FLASH_MESSAGE_DANGER)
-                return render_template(constants.TEMPLATE_PROFILE, profile=profile), constants.HTTP_STATUS_CODE_404
+        profile_data = users_repo.get_profile(session[constants.USER_ID])
+        if profile_data is None:
+            flash("User profile not found.", constants.FLASH_MESSAGE_DANGER)
+            return render_template(constants.TEMPLATE_PROFILE, profile=profile_data), constants.HTTP_STATUS_CODE_404
     except Exception:
         flash("An error occurred while processing your request. Please try again.", constants.FLASH_MESSAGE_DANGER)
-        return render_template(constants.TEMPLATE_PROFILE, profile=profile), constants.HTTP_STATUS_CODE_500
+        return render_template(constants.TEMPLATE_PROFILE, profile=profile_data), constants.HTTP_STATUS_CODE_500
 
     mode = request.args.get(constants.URL_PARAMETER_MODE, '')
-    return render_template(constants.TEMPLATE_PROFILE, mode=mode, profile=profile)
+    return render_template(constants.TEMPLATE_PROFILE, mode=mode, profile=profile_data)
 
 
 @users_bp.route('/profile/edit', methods=[constants.HTTP_METHOD_POST])
@@ -139,7 +127,7 @@ def profile_edit():
             return render_template(constants.TEMPLATE_PROFILE, mode=constants.URL_PARAMETER_MODE_EDIT), constants.HTTP_STATUS_CODE_400
 
         role = session.get(constants.USER_ROLE)
-        profile = {
+        profile_data = {
             constants.USERNAME: username,
             constants.EMAIL: email,
             constants.FIRST_NAME: first_name,
@@ -151,7 +139,7 @@ def profile_edit():
             flash("User role is missing. Please log out and log in again.", constants.FLASH_MESSAGE_DANGER)
             return render_template(constants.TEMPLATE_PROFILE,
                                    mode=constants.URL_PARAMETER_MODE_EDIT,
-                                   profile=profile), constants.HTTP_STATUS_CODE_400
+                                   profile=profile_data), constants.HTTP_STATUS_CODE_400
 
         email_error, password_error, first_name_error, last_name_error, location_error = validate_profile_details(
             email, '', '', first_name, last_name, location)
@@ -159,41 +147,43 @@ def profile_edit():
         if email_error or first_name_error or last_name_error or location_error:
             return render_template(constants.TEMPLATE_PROFILE,
                                    mode=constants.URL_PARAMETER_MODE_EDIT,
-                                   profile=profile,
+                                   profile=profile_data,
                                    email_error=email_error,
                                    first_name_error=first_name_error,
                                    last_name_error=last_name_error,
                                    location_error=location_error)
+
+        if uploaded_image:
+            file_extension = os.path.splitext(uploaded_image.filename)[1]
+            folder_path = os.path.join(current_app.root_path, constants.STATIC_IMAGES_PATH)
+            if not os.path.exists(folder_path):
+                os.makedirs(folder_path)
+            filename = constants.USER_PROFILE_IMAGE + '_' + session[constants.USERNAME] + file_extension
+            if not allowed_file(filename):
+                flash("The uploaded profile image type is not jpg, jpeg, or png.", constants.FLASH_MESSAGE_DANGER)
+                return render_template(constants.TEMPLATE_PROFILE,
+                                       mode=constants.URL_PARAMETER_MODE_EDIT,
+                                       profile=profile_data), constants.HTTP_STATUS_CODE_400
+            filepath = os.path.join(folder_path, filename)
+            uploaded_image.save(filepath)
+            new_profile_image = os.path.join(constants.STATIC_IMAGES_URL, filename)
+        elif delete_image == constants.DELETE_IMAGE_PERFORMED:
+            new_profile_image = constants.STATIC_IMAGES_URL + constants.DEFAULT_PROFILE_IMAGE_NAME
         else:
-            if uploaded_image:
-                file_extension = os.path.splitext(uploaded_image.filename)[1]
-                folder_path = os.path.join(current_app.root_path, constants.STATIC_IMAGES_PATH)
-                if not os.path.exists(folder_path):
-                    os.makedirs(folder_path)
-                filename = constants.USER_PROFILE_IMAGE + '_' + session[constants.USERNAME] + file_extension
-                if not allowed_file(filename):
-                    flash("The uploaded profile image type is not jpg, jpeg, or png.", constants.FLASH_MESSAGE_DANGER)
-                    return render_template(constants.TEMPLATE_PROFILE,
-                                           mode=constants.URL_PARAMETER_MODE_EDIT,
-                                           profile=profile), constants.HTTP_STATUS_CODE_400
-                filepath = os.path.join(folder_path, filename)
-                uploaded_image.save(filepath)
-                new_profile_image = os.path.join(constants.STATIC_IMAGES_URL, filename)
-            elif delete_image == constants.DELETE_IMAGE_PERFORMED:
-                new_profile_image = constants.STATIC_IMAGES_URL + constants.DEFAULT_PROFILE_IMAGE_NAME
-            else:
-                new_profile_image = profile_image
-            try:
-                with db.get_cursor() as cursor:
-                    cursor.execute(
-                        'UPDATE users SET email=%s, first_name=%s, last_name=%s, location=%s, profile_image=%s WHERE user_id = %s;',
-                        (request.form[constants.EMAIL], request.form[constants.FIRST_NAME],
-                         request.form[constants.LAST_NAME], request.form[constants.LOCATION],
-                         new_profile_image, session[constants.USER_ID]))
-                return redirect(url_for(constants.URL_PROFILE))
-            except Exception:
-                flash("An error occurred while processing your request. Please try again.", constants.FLASH_MESSAGE_DANGER)
-                return render_template(constants.TEMPLATE_PROFILE, profile=profile), constants.HTTP_STATUS_CODE_500
+            new_profile_image = profile_image
+
+        try:
+            users_repo.update_profile(
+                session[constants.USER_ID],
+                request.form[constants.EMAIL],
+                request.form[constants.FIRST_NAME],
+                request.form[constants.LAST_NAME],
+                request.form[constants.LOCATION],
+                new_profile_image)
+            return redirect(url_for(constants.URL_PROFILE))
+        except Exception:
+            flash("An error occurred while processing your request. Please try again.", constants.FLASH_MESSAGE_DANGER)
+            return render_template(constants.TEMPLATE_PROFILE, profile=profile_data), constants.HTTP_STATUS_CODE_500
 
     return render_template(constants.TEMPLATE_LOGIN)
 
