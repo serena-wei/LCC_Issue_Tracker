@@ -1,10 +1,12 @@
 """Application configuration loaded from environment variables."""
 import os
+from pathlib import Path
 
 from dotenv import load_dotenv
 
-# Load local .env if present (never commit real secrets).
-load_dotenv()
+# Always load project-root .env (WSGI cwd may not be the project folder).
+_ENV_PATH = Path(__file__).resolve().parent.parent / '.env'
+load_dotenv(_ENV_PATH)
 
 
 class Config:
