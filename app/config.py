@@ -5,8 +5,9 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 # Always load project-root .env (WSGI cwd may not be the project folder).
+# override=True so a stale process env cannot block values from .env.
 _ENV_PATH = Path(__file__).resolve().parent.parent / '.env'
-load_dotenv(_ENV_PATH)
+load_dotenv(_ENV_PATH, override=True)
 
 
 class Config:
