@@ -5,9 +5,10 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 # Always load project-root .env (WSGI cwd may not be the project folder).
-# override=True so a stale process env cannot block values from .env.
+# override=False: values already set in the process (e.g. PythonAnywhere WSGI)
+# win over .env, so deploy credentials are not replaced by a stale .env file.
 _ENV_PATH = Path(__file__).resolve().parent.parent / '.env'
-load_dotenv(_ENV_PATH, override=True)
+load_dotenv(_ENV_PATH, override=False)
 
 
 class Config:
