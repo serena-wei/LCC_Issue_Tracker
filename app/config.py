@@ -5,9 +5,11 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 # Always load project-root .env (WSGI cwd may not be the project folder).
-# override=True so a stale process env cannot block values from .env.
+# override=False: process env (e.g. set in WSGI) wins over .env.
+# interpolate=False: keep literal '$' in values like PythonAnywhere DB names
+# (user$dbname); otherwise dotenv treats $dbname as a variable to expand.
 _ENV_PATH = Path(__file__).resolve().parent.parent / '.env'
-load_dotenv(_ENV_PATH, override=True)
+load_dotenv(_ENV_PATH, override=False, interpolate=False)
 
 
 class Config:
